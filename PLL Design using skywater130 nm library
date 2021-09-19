@@ -1,0 +1,149 @@
+
+
+Go to https://github.com/google/skywater-pdk
+
+Click on libraries
+
+Click sky130_fd_pr
+
+Click latest @ f62031a
+
+In the right corner click on code and copy the link and use the command 
+"git clone https://github.com/google/skywater-pdk-libs-sky130_fd_pr.git" in the terminal
+
+
+then go to the folder skywater-pdk-libs-sky130_fd_pr manually in your machine
+
+enter the folder "cells" 
+
+In that enter "nfet_01v8" folder
+
+copy the file "sky130_fd_pr__nfet_01v8__tt.pm3.spice" file.
+
+
+In the mean time create a new folder called spice_lib folder in the work_dir folder and paste that file in that folder.
+
+
+enter the folder "cells" 
+
+In that enter pfet_01v8" folder
+
+copy the file "sky130_fd_pr__pfet_01v8__tt.pm3.spice" file and paste it in spice Lib folder.
+
+
+
+in skywater-pdk-libs-sky130_fd_pr/ folder enter models folder and then in parameters folder
+
+copy invariant.spice file and lod.spice file and paste it in spice Lib folder.
+
+
+now its time to create our own library by the name sky130.lib.
+
+Steps:
+being in the terminal cd spice_lib
+use the command nano skulib30.lib
+in that include all the 4 files copied in spice_lib folder usig the commands
+
+*comment:skylib.30
+.include invariant.spice 
+.include lod.spice
+.include sky130_fd_pr__nfet_01v8__tt.pm3.spice
+.include sky130_fd_pr__pfet_01v8__tt.pm3.spice
+
+
+ctrl+s 
+
+you should see a message 5 lines have been written
+
+ctrl+x
+
+
+
+
+Steps to install MAGIC
+
+go to http://opencircuitdesign.com/
+
+
+on left panel, you wll see a tab called Magic, click on that, in that click on Donwload
+
+in that use the git link mentioned under the title "Source Distribution Git Repository"
+
+copy the link "git clone git://opencircuitdesign.com/magic" in the terminal.
+
+Now we need to install the dependencies, for that you will find the commands to install the depencies in the install page of magic website.
+
+
+go to https://github.com/RTimothyEdwards/open_pdks on browser 
+
+
+
+
+
+
+In order to extract the parasitics use the command.
+
+Lets say, we want to know the parasitics of FD(Frequency Divider) block,
+use the command i to selecte all the layout in the current window
+then
+in the console type 
+extract all
+
+*A message Extracting FD into FD.ext* will be displayed
+
+then use the command
+ext2spice cthresh 0 rthresh 0
+ext2spice
+*A message exttospice finished* will be displayed.
+
+Few points to note:
+
+In the command
+"ext2spice cthresh 0 rthresh 0"
+
+cthresh 0 rthresh 0 --> means any amount of resistive and capacitive effect present will be extracted.
+If we mention as 1fF means extarct the paasitice greater than 1fF.  
+
+
+
+If we open up the FD.spice file which is the extracted version, we can see lot of additional capacitances extracted by magic, these are parasitics
+Few other parameters in this file are area of drain(ad), perimeter of drain(pd) etc.
+
+We also see a scale factor being mentined on top.
+
+.option scale indicates a multiplication factor thae needs to be multiplied with all the parameter.
+
+We know that the minimum length when we use skywater is L=150nm, 
+and if we mention L=15 the scale factor must be choosen as 10n
+
+A total of 84 parasitic capacitance for VCO
+43 for FD
+47 for PFD
+68 for CP
+ can be observed from .spice files.
+
+
+
+For post layout simulation
+
+run the command
+nano PFD_postlay.cir
+
+and type the following
+
+.include spice_lib/sky130.lib
+.include PFD.spice
+
+XX1 Ref_clk Up Down clk2 GND VDD PFD
+
+v1 VDD GND 1.8
+v2 Ref_clk 0 PULSE 0 1.8 0n 6p 6p 40ns 80ns
+v3 Clk2 0 PULSE 0 1.8 1n 6p 6p 40ns 80ns
+
+
+.control
+tran 0.1ns 5us
+plot v(Up) v(Down)+2 v(Ref_clk)+4 v(clk2)+6
+.endc
+
+.end
